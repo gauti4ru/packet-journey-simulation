@@ -14,7 +14,7 @@ Built as a single self-contained **Design Component** (`.dc.html`) — no build 
 | `support.js` | The Design Component runtime (auto-generated). Required by the `.dc.html` file. Do not edit. |
 | `CLAUDE.md` | Guidance for working on the project with Claude Code. |
 
-> Open **`Packet Journey v2.dc.html`** directly in any modern browser.
+> Open **`index.html`** directly in any modern browser.
 
 ---
 
@@ -74,7 +74,7 @@ Everything on screen is clickable — playback pauses so you can read the detail
 
 ```bash
 # clone, then simply open the file in a browser:
-open "Packet Journey v2.dc.html"      # macOS
+open "index.html"      # macOS
 # or double-click it in your file explorer
 ```
 
