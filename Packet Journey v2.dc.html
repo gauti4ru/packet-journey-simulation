@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#03050a;overflow:hidden;font-family:'Space Grotesk',system-ui,sans-serif;color:#eef3ff}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fan{to{transform:rotate(360deg)}}
+    @keyframes dash{to{stroke-dashoffset:-60}}
+    @keyframes busflow{to{stroke-dashoffset:-32}}
+    @keyframes hum{0%,100%{opacity:.45}50%{opacity:.95}}
+    @keyframes pulse{0%{transform:scale(.5);opacity:.55}100%{transform:scale(2.4);opacity:0}}
+    @keyframes flick{0%,100%{opacity:.5}50%{opacity:1}}
+    @keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(220px)}}
+    @keyframes shimmer{0%,100%{opacity:.18;transform:translateY(0) scaleY(1)}50%{opacity:.42;transform:translateY(-4px) scaleY(1.08)}}
+    @keyframes rgbcycle{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+    @keyframes dustA{0%{transform:translate(0,0)}100%{transform:translate(40px,-70px)}}
+    @keyframes dustB{0%{transform:translate(0,0)}100%{transform:translate(-55px,-90px)}}
+    @keyframes tracepulse{0%{offset-distance:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{offset-distance:100%;opacity:0}}
+    @keyframes breathe{0%,100%{opacity:.5}50%{opacity:.85}}
+    @keyframes ledblink{0%,100%{opacity:.35}50%{opacity:1}}
+    ::selection{background:#4fd6e0;color:#04060c}
+    input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;width:100%;height:16px;cursor:pointer}
+    input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:linear-gradient(90deg,#4fd6e0 var(--pct,0%),rgba(160,190,230,.16) var(--pct,0%))}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#9af0f7;box-shadow:0 0 12px #4fd6e0;margin-top:-5px}
+    .ctlbtn{display:flex;align-items:center;justify-content:center;border:1px solid rgba(160,190,230,.18);background:rgba(18,26,40,.7);color:#cfe0f4;border-radius:9px;cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all .15s ease;user-select:none}
+    .ctlbtn:hover{border-color:#4fd6e0;color:#9af0f7;box-shadow:0 0 14px rgba(79,214,224,.25)}
+    .urlin{background:rgba(8,12,20,.8);border:1px solid rgba(160,190,230,.2);color:#dfeaf8;font-family:'IBM Plex Mono',monospace;border-radius:8px;padding:7px 11px;outline:none;font-size:12px}
+    .urlin:focus{border-color:#4fd6e0;box-shadow:0 0 12px rgba(79,214,224,.2)}
+  </style>
+</helmet>
+<div style="position:fixed;inset:0;background:radial-gradient(130% 100% at 50% 35%,#0a1322 0%,#05080f 55%,#02040a 100%);overflow:hidden">
+
+  <div style="position:absolute;inset:0;box-shadow:inset 0 0 280px 70px rgba(0,0,0,.85);pointer-events:none;z-index:60"></div>
+
+  {{ stage }}
+
+  <!-- top HUD -->
+  <div style="position:absolute;top:0;left:0;right:0;padding:22px 30px;display:flex;align-items:flex-start;justify-content:space-between;z-index:45;pointer-events:none">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:9px;height:9px;border-radius:50%;background:{{ layerColor }};box-shadow:0 0 12px {{ layerColor }};animation:flick 2s infinite"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.32em;color:{{ layerColor }}">{{ chapterLayer }}</span>
+      </div>
+      <div style="font-size:25px;font-weight:600;margin-top:7px;letter-spacing:-.01em">{{ chapterTitle }}</div>
+      <div style="font-size:13px;color:#8294af;margin-top:3px;max-width:440px;line-height:1.45">{{ chapterDesc }}</div>
+    </div>
+    <div style="text-align:right;font-family:'IBM Plex Mono',monospace">
+      <div style="font-size:11px;letter-spacing:.26em;color:#5a6c8a">INSIDE&nbsp;THE&nbsp;MACHINE</div>
+      <div style="font-size:11px;color:#46566f;margin-top:4px">SCENE {{ chapterNo }} / {{ chapterCount }}</div>
+      <div style="font-size:10px;color:#3c4a60;margin-top:8px;letter-spacing:.12em">CLICK ANY PART TO INSPECT</div>
+    </div>
+  </div>
+
+  <!-- inspector -->
+  <sc-if value="{{ sel }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:0;right:0;bottom:0;width:372px;background:linear-gradient(180deg,rgba(8,13,23,.97),rgba(5,9,17,.98));border-left:1px solid rgba(120,160,210,.18);backdrop-filter:blur(9px);z-index:70;display:flex;flex-direction:column;box-shadow:-24px 0 70px rgba(0,0,0,.55)">
+      <div style="padding:18px 20px;border-bottom:1px solid rgba(120,160,210,.12);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.28em;color:#5a6c8a">{{ sel.kicker }}</div>
+          <div style="font-size:18px;font-weight:600;margin-top:3px">{{ sel.title }}</div>
+        </div>
+        <div class="ctlbtn" style="width:30px;height:30px;font-size:16px" onClick="{{ onClose }}">×</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:14px 16px">{{ inspectorBody }}</div>
+    </div>
+  </sc-if>
+
+  <!-- transport controls -->
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:50;padding:16px 26px 18px;background:linear-gradient(0deg,rgba(3,5,11,.95),rgba(3,5,11,.45) 70%,transparent)">
+    <div style="position:relative;margin-bottom:13px">
+      {{ ticksNode }}
+      <input type="range" min="0" max="{{ duration }}" step="0.02" value="{{ time }}" oninput="{{ onScrub }}" style="--pct: {{ pct }}; position:relative;z-index:2"/>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="ctlbtn" style="width:38px;height:34px;font-size:13px" onClick="{{ onRestart }}" title="Restart">↺</div>
+      <div class="ctlbtn" style="width:38px;height:34px;font-size:12px" onClick="{{ onPrev }}" title="Previous">⟨⟨</div>
+      <div class="ctlbtn" style="width:50px;height:34px;font-size:13px;border-color:rgba(79,214,224,.45);color:#9af0f7" onClick="{{ onPlay }}" title="Play / Pause">{{ playLabel }}</div>
+      <div class="ctlbtn" style="width:38px;height:34px;font-size:12px" onClick="{{ onNext }}" title="Next">⟩⟩</div>
+      <div style="display:flex;gap:5px;margin-left:4px">
+        <sc-for list="{{ speeds }}" as="s" hint-placeholder-count="4"><div class="ctlbtn" style="height:34px;padding:0 9px;font-size:11px;border-color:{{ s.bc }};color:{{ s.fc }};background:{{ s.bg }}" onClick="{{ s.set }}">{{ s.label }}</div></sc-for>
+      </div>
+      <div style="flex:1"></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5a6c8a;letter-spacing:.06em">{{ clock }}</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-left:6px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5a6c8a">GET</span>
+        <input class="urlin" value="{{ url }}" oninput="{{ onUrl }}" spellcheck="false" style="width:220px"/>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  C = { cyan:'#4fd6e0', green:'#54e08a', amber:'#ffb454', violet:'#b48cff', red:'#ff6b8a', white:'#eef3ff', dim:'#8294af', kernel:'#9fb4d4', copper:'#3ad29a' };
+  state = { time:0, playing:true, speed:1, url:'https://www.google.com', sel:null };
+
+  P = {
+    cpu:{x:300,y:248,w:212,h:212}, vrm:{x:300,y:158,w:212,h:66},
+    ramZone:{x:600,y:150,w:230,h:252}, chipset:{x:560,y:520,w:132,h:132},
+    nic:{x:842,y:468,w:152,h:122}, ethport:{x:1016,y:498,w:80,h:66},
+    ssd:{x:300,y:602,w:240,h:44}, pcie:{x:200,y:540,w:560,h:28}, fan:{x:104,y:240,w:152,h:152},
+  };
+  BW=1120; BH=720;
+
+  chaptersRaw=[
+    {t:'Your Desk',           layer:'CLIENT',       col:'#4fd6e0', dur:6,  d:'You type a URL, press Enter, and the camera dives through the glass.'},
+    {t:'The Living Board',    layer:'HARDWARE',     col:'#4fd6e0', dur:5,  d:'A real motherboard, alive — power rails, clock pulses and data buses flowing.'},
+    {t:'Application · RAM',    layer:'APPLICATION',  col:'#4fd6e0', dur:7,  d:'The browser process builds an HTTP request object, stored in physical memory.'},
+    {t:'CPU Execution',       layer:'COMPUTE',      col:'#4fd6e0', dur:7,  d:'One core runs the main thread — registers and assembly stepping live.'},
+    {t:'System Call',         layer:'KERNEL GATE',  col:'#ffb454', dur:5,  d:'send() opens a portal from Ring 3 to Ring 0 — privilege switches.'},
+    {t:'Kernel Networking',   layer:'KERNEL',       col:'#9fb4d4', dur:8,  d:'Execution beams flow CPU → kernel code → RAM through the TCP/IP stack.'},
+    {t:'Memory Objects',      layer:'MEMORY',       col:'#54e08a', dur:6,  d:'Each allocation appears physically in RAM: socket, SKB, headers, frame.'},
+    {t:'TCP Segment',         layer:'TRANSPORT',    col:'#54e08a', dur:6,  d:'The transport layer stamps sequence, ack, checksum, flags and window.'},
+    {t:'IP Routing',          layer:'NETWORK',      col:'#ffb454', dur:5,  d:'The routing engine looks up the destination and adds the IP header.'},
+    {t:'NIC Driver',          layer:'DRIVER',       col:'#b48cff', dur:6,  d:'ndo_start_xmit() programs the descriptor ring across the PCIe bus.'},
+    {t:'NIC Firmware',        layer:'FIRMWARE',     col:'#b48cff', dur:7,  d:'Inside the card, its own processor DMAs the frame from RAM out to the PHY.'},
+    {t:'Interrupt',           layer:'IRQ',          col:'#ff6b8a', dur:5,  d:'TX-complete fires an interrupt back across the traces to the CPU.'},
+    {t:'TCP Handshake & The Journey', layer:'INTERNET · TCP', col:'#4fd6e0', dur:28, d:'Frames leave the NIC and ride EM waves across the Internet — SYN, SYN-ACK, ACK establish the connection, then segmented data streams to Google and is reassembled in order.'},
+  ];
+
+  get chapters(){ if(this._ch) return this._ch; let s=0; this._ch=this.chaptersRaw.map(c=>{const o={...c,start:s,end:s+c.dur};s+=c.dur;return o;}); this._dur=s; return this._ch; }
+  get duration(){ this.chapters; return this._dur; }
+
+  componentDidMount(){ this._last=null; this._raf=requestAnimationFrame(this.tick); this._on=()=>this.forceUpdate(); window.addEventListener('resize',this._on); }
+  componentWillUnmount(){ cancelAnimationFrame(this._raf); window.removeEventListener('resize',this._on); }
+  tick=(now)=>{ if(this._last==null)this._last=now; const dt=Math.min(0.05,(now-this._last)/1000); this._last=now;
+    if(this.state.playing){ let t=this.state.time+dt*this.state.speed; if(t>=this.duration)this.setState({time:this.duration,playing:false}); else this.setState({time:t}); }
+    this._raf=requestAnimationFrame(this.tick); };
+
+  cl(v,a,b){return Math.max(a,Math.min(b,v));}
+  ss(a,b,x){const t=this.cl((x-a)/(b-a),0,1);return t*t*(3-2*t);}
+  // ease in-out cubic — smoother, more cinematic acceleration/settle than smoothstep
+  eio(a,b,x){const t=this.cl((x-a)/(b-a),0,1);return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+  lerp(a,b,t){return a+(b-a)*t;}
+  locate(time){const ch=this.chapters;let i=ch.length-1;for(let k=0;k<ch.length;k++){if(time<ch[k].end){i=k;break;}}const c=ch[i];return{i,p:this.cl((time-c.start)/c.dur,0,1)};}
+  host(){try{return this.state.url.replace(/^https?:\/\//,'').split('/')[0]||'example.com';}catch(e){return 'example.com';}}
+  path(){try{const s=this.state.url.replace(/^https?:\/\//,'');const p=s.indexOf('/');return p<0?'/':s.slice(p);}catch(e){return '/';}}
+  cen(o){return{x:o.x+o.w/2,y:o.y+o.h/2};}
+
+  // ---------- CAMERA ----------
+  focusFor(i){const P=this.P,c=this.cen.bind(this);
+    const F={0:{x:560,y:360,s:5.5},1:{x:560,y:360,s:1},2:{...c(P.ramZone),s:1.75},3:{...c(P.cpu),s:1.85},
+      4:{...c(P.cpu),s:1.85},5:{x:470,y:360,s:1.45},6:{...c(P.ramZone),s:1.7},7:{...c(P.ramZone),s:1.6},
+      8:{...c(P.chipset),s:1.95},9:{x:690,y:470,s:1.4},10:{...c(P.nic),s:2.7},11:{x:610,y:380,s:1.05},12:{x:900,y:500,s:1.35}};
+    return F[i]||F[1];}
+  cam(i,p){const f1=this.focusFor(i),f0=this.focusFor(Math.max(0,i-1));
+    // smoother eased glide; scale leads slightly so we "pull focus" before drifting into place
+    const k=this.eio(0,0.5,p), ks=this.eio(0,0.42,p);
+    return {x:this.lerp(f0.x,f1.x,k),y:this.lerp(f0.y,f1.y,k),s:this.lerp(f0.s,f1.s,ks)};}
+
+  // ---------- small builders ----------
+  part(key,o,style,kids,onClick){const e=React.createElement;
+    return e('div',{key,onClick,style:{position:'absolute',left:o.x+'px',top:o.y+'px',width:o.w+'px',height:o.h+'px',cursor:onClick?'pointer':'default',...style}},kids);}
+
+  holo(pos,opt){const e=React.createElement,C=this.C,col=opt.color||C.cyan,w=opt.w||200;
+    const x=this.cl(pos.x,18,(this._vw||1280)-w-20), y=this.cl(pos.y,148,(this._vh||720)-250);
+    const rows=(opt.rows||[]).map((r,k)=>e('div',{key:k,style:{display:'flex',justifyContent:'space-between',gap:'12px',padding:'2px 9px',borderRadius:'4px',
+      background:r.on?col+'22':'transparent',color:r.on?'#eef6ff':(r.dim?'#6f7f99':'#bcd0e8'),fontFamily:'IBM Plex Mono,monospace',fontSize:'11px',lineHeight:'1.85',
+      borderLeft:r.on?'2px solid '+col:'2px solid transparent'}}, e('span',null,r.l), r.r!=null?e('span',{style:{color:r.on?col:'#7f93b0'}},r.r):null));
+    return e('div',{key:opt.key,style:{position:'absolute',left:x+'px',top:y+'px',width:w+'px',
+      background:'linear-gradient(180deg,'+col+'18,rgba(6,12,22,.86))',border:'1px solid '+col+'66',borderRadius:'10px',overflow:'hidden',
+      boxShadow:'0 0 34px '+col+'33,0 18px 50px rgba(0,0,0,.5)',backdropFilter:'blur(4px)',zIndex:30,pointerEvents:'none'}},
+      e('div',{style:{padding:'7px 11px',borderBottom:'1px solid '+col+'33',display:'flex',alignItems:'center',gap:'7px',background:col+'14'}},
+        e('span',{style:{width:'6px',height:'6px',borderRadius:'50%',background:col,boxShadow:'0 0 8px '+col,animation:'flick 1.6s infinite'}}),
+        e('span',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',letterSpacing:'.16em',color:col}},opt.title)),
+      e('div',{style:{padding:'7px 4px',position:'relative'}}, rows,
+        e('div',{style:{position:'absolute',left:0,right:0,top:0,height:'14px',background:'linear-gradient(180deg,'+col+'22,transparent)',animation:'scan 3.5s linear infinite',pointerEvents:'none'}})));}
+
+  capsule(level,h,opt={}){const C=this.C,e=React.createElement;
+    const segs=[{c:C.violet,w:0.5,l:'ETH'},{c:C.amber,w:0.46,l:'IP'},{c:C.green,w:0.46,l:'TCP'},{c:C.cyan,w:0.46,l:'HTTP'},{c:C.white,w:1.3,l:'DATA'}];
+    const shown=segs.slice(segs.length-level),outer=shown[0].c;
+    const kids=shown.map((s,idx)=>e('div',{key:idx,style:{flex:s.l==='DATA'?'1 1 auto':'0 0 auto',width:s.l==='DATA'?'auto':(s.w*h)+'px',
+      background:s.l==='DATA'?'repeating-linear-gradient(90deg,'+s.c+'22 0 5px,'+s.c+'10 5px 10px)':s.c+'cc',borderRight:idx<shown.length-1?'1px solid rgba(4,6,12,.6)':'none',
+      display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:Math.max(6,h*0.2)+'px',fontWeight:600,
+      color:s.l==='DATA'?'#bcd0e8':'#06121a'}}, h>20?s.l:''));
+    if(level>=5)kids.push(e('div',{key:'f',style:{flex:'0 0 auto',width:(0.28*h)+'px',background:C.violet+'66'}}));
+    return e('div',{onClick:opt.onClick,style:{display:'flex',height:h+'px',borderRadius:(h*0.5)+'px',overflow:'hidden',border:'1px solid '+outer+'aa',
+      boxShadow:'0 0 '+(h*0.7)+'px '+outer+'88',cursor:opt.onClick?'pointer':'default',...(opt.style||{})}},kids);}
+
+  // ---------- INSPECTOR DATA ----------
+  S(label,color,rows){return{label,color,rows};}
+  open(o){this.setState({sel:o,playing:false});}
+  inspCPU(){const C=this.C;return{kicker:'HARDWARE · SILICON',title:'CPU — 8 cores',sections:[
+    this.S('PACKAGE',C.cyan,['Cores: 8 · Threads: 16','Base 3.4 GHz · Boost 5.1 GHz','L3 Cache: 32 MB','TDP: 65 W','Microarch: x86-64']),
+    this.S('CORE 0 · ACTIVE',C.cyan,['Thread: chrome (main)','Ring: 0 (kernel)','IPC ≈ 3.2','Branch predictor: 98.4% hit']),
+    this.S('REGISTERS',C.green,['RAX 0x00007ffd1a2c','RBX 0x0000000000','RCX 0x00007f9e4410','RDX 0x0000000200','RSP 0x00007ffd1a08','RIP 0xffffffff8174']) ]};}
+  inspRAM(){const C=this.C,h=this.host();return{kicker:'HARDWARE · DDR5',title:'Main Memory',sections:[
+    this.S('MODULE',C.green,['16 GB DDR5-6000','Dual channel','In use: 11.3 GB']),
+    this.S('REQUEST OBJECT',C.cyan,['Addr: 0x7f9e4410','Size: 480 B','Owner: chrome','GET '+this.path()+' → '+h]),
+    this.S('SEGMENTS',C.amber,['Stack  0x7ffd…','Heap   0x55a1…','Code   0x4000…','Shared libs .so']) ]};}
+  inspNIC(){const C=this.C;return{kicker:'HARDWARE · CONTROLLER',title:'Network Card',sections:[
+    this.S('CONTROLLER',C.violet,['Realtek-class GbE','Link: 1000 Mbps full','MAC f0:18:98:2a:71:0c']),
+    this.S('FIRMWARE',C.violet,['Boot ROM: loaded','State: running','Checksum offload: on','TX scheduler: active']),
+    this.S('DMA ENGINE',C.amber,['Descriptor ring: 256','Ring head → 41','Bus: PCIe x1 Gen3']) ]};}
+  inspPacket(i){const C=this.C,h=this.host();return{kicker:'PACKET '+(i+1)+' / 7',title:'Frame on the wire',sections:[
+    this.S('HTTP · APPLICATION',C.cyan,['GET '+this.path()+' HTTP/1.1','Host: '+h,'User-Agent: Mozilla/5.0','Accept: text/html']),
+    this.S('TCP · TRANSPORT',C.green,['Src Port '+(49152+i*7),'Dst Port 443','Seq '+(2748113900+i*1460),'Flags PSH, ACK · Win 64240']),
+    this.S('IP · NETWORK',C.amber,['Ver 4 · TTL 64 · TCP','Src 192.168.1.24','Dst 142.250.72.46']),
+    this.S('ETHERNET · LINK',C.violet,['Dst a4:5e:60:12:cd:8f','Src f0:18:98:2a:71:0c','Type 0x0800 IPv4']),
+    this.S('PAYLOAD',C.white,['GET '+this.path()+' HTTP/1.1','…segment '+(i+1)+' of 7…']) ]};}
+  inspKernel(){const C=this.C;return{kicker:'SOFTWARE · RING 0',title:'Linux Net Stack',sections:[
+    this.S('CALL STACK',C.kernel,['send()','sock_sendmsg()','tcp_sendmsg()','ip_queue_xmit()','dev_queue_xmit()']),
+    this.S('SOURCE',C.cyan,['net/socket.c','net/ipv4/tcp_output.c','net/ipv4/ip_output.c','net/core/dev.c']) ]};}
+  inspChipset(){const C=this.C;return{kicker:'HARDWARE · PCH',title:'Chipset (PCH)',sections:[
+    this.S('PLATFORM HUB',C.amber,['Southbridge / PCH','DMI 4.0 link to CPU','PCIe 3.0 ×20 lanes']),
+    this.S('PROVIDES',C.cyan,['SATA · USB · LAN','HD Audio · SPI (BIOS)','Platform clocks']),
+    this.S('ROLE',C.dim,['Routes low-speed I/O','Bridges CPU ↔ peripherals']) ]};}
+  inspVRM(){const C=this.C;return{kicker:'HARDWARE · POWER',title:'VRM — Power Stage',sections:[
+    this.S('REGULATION',C.amber,['12 V → ~1.3 V Vcore','Phases: 5 + chokes','MOSFET switching']),
+    this.S('TELEMETRY',C.cyan,['Vcore 1.28 V','Current ~95 A','Temp 48 °C']),
+    this.S('ROLE',C.dim,['Clean, stable CPU power','Responds to load in µs']) ]};}
+  inspFan(){const C=this.C;return{kicker:'HARDWARE · THERMAL',title:'CPU Cooler',sections:[
+    this.S('FAN',C.cyan,['Speed 1180 RPM','PWM controlled','Airflow 62 CFM']),
+    this.S('THERMAL',C.amber,['CPU 54 °C','Target ≤ 85 °C','Heat-pipe tower']) ]};}
+  inspSSD(){const C=this.C;return{kicker:'HARDWARE · STORAGE',title:'M.2 NVMe SSD',sections:[
+    this.S('DRIVE',C.cyan,['1 TB NVMe','PCIe 4.0 ×4','Seq read 7,000 MB/s']),
+    this.S('HOLDS',C.green,['OS + page cache','chrome binary + .so','Swap (if needed)']),
+    this.S('ROLE',C.dim,['Backs RAM via paging','Loads code on demand']) ]};}
+  inspPCIe(){const C=this.C;return{kicker:'HARDWARE · BUS',title:'PCIe ×16 Slot',sections:[
+    this.S('LINK',C.cyan,['PCIe 4.0 ×16','~32 GB/s each way','Hosts the GPU']),
+    this.S('NOTE',C.dim,['NIC uses a separate','PCIe ×1 link to the PCH']) ]};}
+  inspEth(){const C=this.C;return{kicker:'HARDWARE · PHY',title:'RJ45 / Ethernet PHY',sections:[
+    this.S('LINK',C.green,['1000 Mbps full-duplex','Auto-MDIX','Green LED: link · Amber: act']),
+    this.S('PHYSICAL',C.violet,['Magnetics isolation','8P8C twisted pair','Frames → line code']),
+    this.S('ROLE',C.dim,['Bits ↔ electrical signal','The exit to the wire']) ]};}
+  inspBattery(){const C=this.C;return{kicker:'HARDWARE · RTC',title:'CMOS Battery',sections:[
+    this.S('CR2032',C.cyan,['3 V lithium coin','Powers RTC + CMOS','~5–10 year life']),
+    this.S('KEEPS',C.dim,['Real-time clock','BIOS/UEFI settings']) ]};}
+  inspBIOS(){const C=this.C;return{kicker:'HARDWARE · FIRMWARE',title:'BIOS / UEFI Flash',sections:[
+    this.S('SPI FLASH',C.cyan,['16 MB UEFI image','First code after power','POST + init hardware']),
+    this.S('ROLE',C.dim,['Trains RAM, inits buses','Hands off to bootloader']) ]};}
+  inspATX(){const C=this.C;return{kicker:'HARDWARE · POWER',title:'24-pin ATX Power',sections:[
+    this.S('CONNECTOR',C.amber,['+12 V / +5 V / +3.3 V','PSU → motherboard','Feeds VRM + rails']) ]};}
+  inspSATA(){const C=this.C;return{kicker:'HARDWARE · STORAGE',title:'SATA Ports',sections:[
+    this.S('SATA III',C.cyan,['6 Gbps per port','HDDs / 2.5″ SSDs','AHCI via the PCH']) ]};}
+  inspUSB(){const C=this.C;return{kicker:'HARDWARE · I/O',title:'USB Front Header',sections:[
+    this.S('HEADER',C.cyan,['Front-panel USB','5 Gbps (USB 3)','Routed through PCH']) ]};}
+  inspPassive(){const C=this.C;return{kicker:'HARDWARE · SMD',title:'Surface-Mount Passives',sections:[
+    this.S('COMPONENTS',C.cyan,['Resistors · capacitors','Decoupling / filtering','Stabilize power & signals']) ]};}
+
+  // ---- journey: packet & node inspectors ----
+  inspJourneyPacket(type,idx){const C=this.C,h=this.host();const sp=49152+(idx||0);
+    const F={
+      FRAME:{kick:'L2 · ON THE WIRE',title:'Ethernet Frame',flags:'—',seq:'—',pay:'(encapsulated bits)'},
+      SYN:{kick:'TCP · HANDSHAKE 1/3',title:'SYN Packet',flags:'SYN',seq:'0',pay:'(no data — opens connection)'},
+      SYNACK:{kick:'TCP · HANDSHAKE 2/3',title:'SYN-ACK Packet',flags:'SYN, ACK',seq:'0 · ack 1',pay:'(server agrees to connect)'},
+      ACK:{kick:'TCP · HANDSHAKE 3/3',title:'ACK Packet',flags:'ACK',seq:'1 · ack 1',pay:'(connection established)'},
+      SEG:{kick:'TCP · DATA '+((idx||0)+1)+'/6',title:'Data Segment',flags:'PSH, ACK',seq:String((idx||0)*1460),pay:'GET '+this.path()+' …part '+((idx||0)+1)},
+      REPLY:{kick:'TCP · RESPONSE '+((idx||0)+1),title:'200 OK Segment',flags:'PSH, ACK',seq:String((idx||0)*1460),pay:'HTTP/1.1 200 OK …'} };
+    const d=F[type]||F.SEG;const fromServer=(type==='SYNACK'||type==='REPLY');
+    return{kicker:d.kick,title:d.title,sections:[
+      this.S('TCP · TRANSPORT',C.green,['Src Port '+(fromServer?443:sp),'Dst Port '+(fromServer?sp:443),'Seq '+d.seq,'Flags '+d.flags,'Window 64240']),
+      this.S('IP · NETWORK',C.amber,['Ver 4 · TTL '+(fromServer?'57':'64'),'Src '+(fromServer?'142.250.72.46':'192.168.1.24'),'Dst '+(fromServer?'192.168.1.24':'142.250.72.46')]),
+      this.S('ETHERNET · LINK',C.violet,['Src f0:18:98:2a:71:0c','Dst a4:5e:60:12:cd:8f','Type 0x0800 IPv4']),
+      this.S('PAYLOAD',C.white,[d.pay]) ]};}
+  inspNode(label){const C=this.C;const M={
+    'YOUR PC':['Origin host','192.168.1.24','Opens the TCP socket'],
+    'HOME ROUTER':['NAT gateway','Rewrites src ip:port','192.168.1.1 → public IP'],
+    'ISP CORE':['Provider backbone','BGP routing','Carries you to peering'],
+    'UNDERSEA FIBER':['Submarine cable','Light over glass','~200,000 km/s'],
+    'GOOGLE EDGE':['Anycast load balancer','Terminates / forwards','Nearest PoP'],
+    'GOOGLE SERVER':['Destination host','142.250.72.46:443','Reassembles & replies'] };
+    return{kicker:'NETWORK · HOP',title:label,sections:[ this.S('NODE',C.cyan,M[label]||['Network hop']) ]};}
+
+  // ---------- MOTHERBOARD (persistent) ----------
+  // — small reusable board components (drawn purely with CSS) —
+  elcap(key,x,y,r,col,on){const e=React.createElement;return e('div',{key,onClick:on,style:{position:'absolute',left:x+'px',top:y+'px',width:(r*2)+'px',height:(r*2)+'px',marginLeft:-r+'px',marginTop:-r+'px',borderRadius:'50%',cursor:on?'pointer':'default',
+    background:'radial-gradient(circle at 36% 30%,#48566a 0%,#28323f 45%,#141b24 100%)',border:'1px solid #090d14',boxShadow:'0 4px 7px rgba(0,0,0,.6),inset 0 1px 2px rgba(255,255,255,.12)'}},
+    e('div',{style:{position:'absolute',inset:'26%',borderRadius:'50%',background:'#0c1118',boxShadow:'inset 0 0 0 1px '+(col||'#5a6c8a')+'66'}}),
+    e('div',{style:{position:'absolute',left:'50%',top:'14%',bottom:'14%',width:'1.5px',marginLeft:'-0.75px',background:'#5a6c82',opacity:.8}}),
+    e('div',{style:{position:'absolute',left:'14%',right:'14%',top:'50%',height:'1.5px',marginTop:'-0.75px',background:'#5a6c82',opacity:.5}}));}
+  mosfet(key,x,y){const e=React.createElement;return e('div',{key,style:{position:'absolute',left:x+'px',top:y+'px',width:'18px',height:'26px',borderRadius:'2px',
+    background:'linear-gradient(180deg,#1a1d22 0%,#0d0f13 60%,#05070a 100%)',border:'1px solid #2a2e36',boxShadow:'0 2px 4px rgba(0,0,0,.6)'}},
+    e('div',{style:{position:'absolute',left:0,right:0,bottom:'-4px',height:'5px',background:'repeating-linear-gradient(90deg,#9aa6b8 0 2px,transparent 2px 4px)'}}));}
+  hole(key,x,y){const e=React.createElement;return e('div',{key,style:{position:'absolute',left:x+'px',top:y+'px',width:'20px',height:'20px',marginLeft:'-10px',marginTop:'-10px',borderRadius:'50%',
+    background:'radial-gradient(circle at 40% 35%,#aab4c2,#5c6675 55%,#222831 100%)',boxShadow:'inset 0 0 6px rgba(0,0,0,.8),0 1px 2px rgba(0,0,0,.5)'}},
+    e('div',{style:{position:'absolute',inset:'30%',borderRadius:'50%',background:'#05080d',boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}));}
+  silk(key,x,y,txt,rot){const e=React.createElement;return e('div',{key,style:{position:'absolute',left:x+'px',top:y+'px',fontFamily:'IBM Plex Mono,monospace',fontSize:'8px',letterSpacing:'.14em',color:'rgba(190,215,205,.32)',transform:rot?'rotate('+rot+'deg)':'none',transformOrigin:'0 0',whiteSpace:'nowrap',pointerEvents:'none'}},txt);}
+  battery(key,x,y,on){const e=React.createElement;return e('div',{key,onClick:on,style:{position:'absolute',left:x+'px',top:y+'px',width:'40px',height:'40px',marginLeft:'-20px',marginTop:'-20px',borderRadius:'50%',cursor:on?'pointer':'default',
+    background:'radial-gradient(circle at 38% 30%,#e6edf5,#aeb8c6 45%,#727d8c 100%)',border:'1px solid #4a525e',boxShadow:'0 3px 7px rgba(0,0,0,.6),inset 0 1px 2px rgba(255,255,255,.6)'}},
+    e('div',{style:{position:'absolute',inset:'30%',borderRadius:'50%',border:'1px solid #8a93a2'}}),
+    e('div',{style:{position:'absolute',left:0,right:0,top:'46%',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'7px',color:'#3a414c',letterSpacing:'.05em'}},'CR2032'));}
+  bios(key,x,y,on){const e=React.createElement,C=this.C;return e('div',{key,onClick:on,style:{position:'absolute',left:x+'px',top:y+'px',width:'40px',height:'30px',borderRadius:'2px',cursor:on?'pointer':'default',
+    background:'linear-gradient(180deg,#181b21,#0a0d12)',border:'1px solid #2a2e36',boxShadow:'0 2px 5px rgba(0,0,0,.6),inset 0 1px 1px rgba(255,255,255,.06)'}},
+    e('div',{style:{position:'absolute',left:'-3px',top:'4px',bottom:'4px',width:'3px',background:'repeating-linear-gradient(180deg,#9aa6b8 0 2px,transparent 2px 4px)'}}),
+    e('div',{style:{position:'absolute',right:'-3px',top:'4px',bottom:'4px',width:'3px',background:'repeating-linear-gradient(180deg,#9aa6b8 0 2px,transparent 2px 4px)'}}),
+    e('div',{style:{position:'absolute',left:'4px',top:'3px',width:'4px',height:'4px',borderRadius:'50%',border:'1px solid '+C.cyan+'66'}}),
+    e('div',{style:{position:'absolute',left:0,right:0,top:'9px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'6px',letterSpacing:'.1em',color:'#5a6c8a'}},'BIOS'));}
+  smd(key,x,y,w,col,on){const e=React.createElement;return e('div',{key,onClick:on,style:{position:'absolute',left:x+'px',top:y+'px',width:(w||7)+'px',height:'5px',borderRadius:'1px',cursor:on?'pointer':'default',
+    background:col||'#1a2230',border:'0.5px solid #2c3a4c',boxShadow:'0 1px 1px rgba(0,0,0,.5)'}});}
+  smdScatter(){const out=[];const pts=[[160,470],[172,470],[184,470],[640,200],[652,200],[664,200],[760,160],[772,160],[300,690],[330,690],[900,460],[912,460],[1000,420],[1012,420],[470,690],[700,470],[712,470],[520,128],[208,560],[220,560]];
+    pts.forEach((q,k)=>out.push(this.smd('smd'+k,q[0],q[1],6+(k%3)*2,k%4===0?'#2a2030':'#16202e',()=>this.open(this.inspPassive()))));return out;}
+  // animated glowing data pulses that ride the copper traces
+  tracePulse(key,path,dur,delay,col){const e=React.createElement;return e('div',{key,style:{position:'absolute',left:0,top:0,width:'7px',height:'7px',borderRadius:'50%',background:col,
+    boxShadow:'0 0 9px '+col+',0 0 16px '+col,offsetPath:'path("'+path+'")',offsetRotate:'0deg',animation:'tracepulse '+dur+'s linear infinite',animationDelay:delay+'s',pointerEvents:'none'}});}
+
+  board(focus,t){const C=this.C,e=React.createElement,P=this.P,BW=this.BW,BH=this.BH;
+    const on=k=>focus===k;
+    // substrate — layered soldermask + fine silkscreen grid + copper-pour hatch + edge bevel + vignette
+    return e('div',{style:{position:'absolute',left:0,top:0,width:BW+'px',height:BH+'px',
+      background:'linear-gradient(135deg,#0c2419 0%,#08180f 55%,#040f0a 100%)',borderRadius:'16px',border:'1px solid #20543c',
+      boxShadow:'0 60px 140px rgba(0,0,0,.7),inset 0 0 130px rgba(0,0,0,.55),inset 0 2px 0 rgba(120,210,170,.12),inset 0 -3px 12px rgba(0,0,0,.6)',
+      backgroundImage:'linear-gradient(rgba(58,210,154,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(58,210,154,.045) 1px,transparent 1px)',backgroundSize:'24px 24px'}},
+      // copper-pour ground hatch + soft sheen overlay
+      e('div',{style:{position:'absolute',inset:0,borderRadius:'16px',pointerEvents:'none',opacity:.5,
+        backgroundImage:'repeating-linear-gradient(45deg,rgba(58,210,154,.05) 0 2px,transparent 2px 7px)'}}),
+      e('div',{style:{position:'absolute',inset:0,borderRadius:'16px',pointerEvents:'none',
+        background:'radial-gradient(120% 80% at 30% 12%,rgba(120,220,180,.10),transparent 55%),radial-gradient(120% 90% at 50% 55%,transparent 55%,rgba(0,0,0,.55) 100%)'}}),
+      // PCB traces — denser fan-out with vias
+      e('svg',{width:BW,height:BH,style:{position:'absolute',inset:0}},
+        e('g',{stroke:C.copper,strokeOpacity:'.30',strokeWidth:'1.2',fill:'none',strokeLinejoin:'round'},
+          e('path',{d:'M406 248 V120 H700'}),e('path',{d:'M512 354 H600'}),e('path',{d:'M406 460 V520 H560'}),
+          e('path',{d:'M692 586 H842 V520'}),e('path',{d:'M540 624 H300'}),e('path',{d:'M760 540 H842'}),
+          e('path',{d:'M256 316 H300'}),e('path',{d:'M994 520 H1016'}),
+          e('path',{d:'M430 248 V132 H690'}),e('path',{d:'M454 248 V148 H676'}),e('path',{d:'M512 300 H588 V200'}),
+          e('path',{d:'M512 330 H612'}),e('path',{d:'M330 460 V500 H548'}),e('path',{d:'M380 460 V512 H548'}),
+          e('path',{d:'M626 652 V690 H320'}),e('path',{d:'M760 560 H842'}),e('path',{d:'M880 468 V300 H840'}),
+          e('path',{d:'M300 620 H180 V420'}),e('path',{d:'M994 540 H1016'})),
+        // fine signal lines
+        e('g',{stroke:'#2f7d5e',strokeOpacity:'.5',strokeWidth:'0.6',fill:'none'},
+          ...Array.from({length:9}).map((_,k)=>e('path',{key:k,d:'M'+(610+k*2)+' '+(160+k*4)+' H'+(700+k*6)}))),
+        // copper vias
+        e('g',{fill:'#caa23a',fillOpacity:'.55'},
+          ...[[700,120],[600,200],[842,520],[560,520],[300,520],[180,420],[688,652]].map((v,k)=>e('circle',{key:k,cx:v[0],cy:v[1],r:'2.4',stroke:'#3a2e12',strokeWidth:'1'}))),
+        // animated data buses
+        e('g',{stroke:C.cyan,strokeWidth:'2',fill:'none',strokeDasharray:'2 14',style:{animation:'busflow 1.1s linear infinite'},opacity:'.8'},
+          e('path',{d:'M512 354 H600'}),e('path',{d:'M406 248 V160'}),e('path',{d:'M692 586 H842'}),e('path',{d:'M256 316 H300'})),
+        // power rails
+        e('g',{stroke:C.amber,strokeWidth:'3',fill:'none',opacity:'.5',strokeDasharray:'10 8',style:{animation:'busflow 2s linear infinite'}},
+          e('path',{d:'M300 140 H520'}),e('path',{d:'M60 360 H104'}))),
+      // silkscreen markings
+      this.silk('sk1',24,BH-30,'PACKET-JOURNEY  REV 2.0  ·  INSIDE THE MACHINE'),
+      this.silk('sk2',902,150,'ATX_PWR'),this.silk('sk3',566,664,'SATA 0-3'),
+      this.silk('sk4',150,150,'CPU_FAN1'),this.silk('sk5',1020,470,'LAN1'),
+      this.silk('sk6',26,300,'DEBUG',90),
+      // mounting holes
+      this.hole('h1',40,40),this.hole('h2',BW-40,40),this.hole('h3',40,BH-40),this.hole('h4',BW-40,BH-40),this.hole('h5',BW-40,360),
+      // clock pulses near cpu
+      ...[0,0.7,1.4].map((d,k)=>e('div',{key:'pl'+k,style:{position:'absolute',left:'406px',top:'354px',width:'80px',height:'80px',marginLeft:'-40px',marginTop:'-40px',
+        borderRadius:'50%',border:'1.5px solid '+C.cyan,animation:'pulse 2.1s ease-out infinite',animationDelay:d+'s',pointerEvents:'none'}})),
+      // 24-pin ATX power connector
+      e('div',{key:'atx',onClick:()=>this.open(this.inspATX()),style:{position:'absolute',left:'882px',top:'56px',width:'58px',height:'92px',borderRadius:'5px',cursor:'pointer',background:'linear-gradient(180deg,#15191f,#0a0d12)',border:'1px solid #2a3038',boxShadow:'inset 0 0 10px rgba(0,0,0,.7)',display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'repeat(12,1fr)',gap:'1px',padding:'4px'}},
+        ...Array.from({length:24}).map((_,k)=>e('div',{key:k,style:{background:'linear-gradient(180deg,#2a2f37,#10141a)',borderRadius:'1px',boxShadow:'inset 0 -1px 1px rgba(0,0,0,.6)',pointerEvents:'none'}}))),
+      // electrolytic capacitor banks
+      this.elcap('cap1',560,118,11,C.amber,()=>this.open(this.inspVRM())),this.elcap('cap2',596,118,11,C.amber,()=>this.open(this.inspVRM())),this.elcap('cap3',632,118,9,C.cyan,()=>this.open(this.inspPassive())),
+      this.elcap('cap4',520,690,12,C.green,()=>this.open(this.inspPassive())),this.elcap('cap5',556,690,12,C.green,()=>this.open(this.inspPassive())),
+      this.elcap('cap6',760,470,10,C.violet,()=>this.open(this.inspPassive())),this.elcap('cap7',1000,300,9,C.cyan,()=>this.open(this.inspPassive())),
+      // SATA ports
+      e('div',{key:'sata',onClick:()=>this.open(this.inspSATA()),style:{position:'absolute',left:'560px',top:'674px',display:'flex',gap:'6px',cursor:'pointer'}},
+        ...Array.from({length:4}).map((_,k)=>e('div',{key:k,style:{width:'22px',height:'26px',borderRadius:'2px',background:'linear-gradient(180deg,#0c1b14,#06120c)',border:'1px solid #1d4233',boxShadow:'inset 0 -6px 8px rgba(0,0,0,.5)'}},
+          e('div',{style:{position:'absolute',left:'4px',right:'4px',top:'5px',height:'8px',background:'#0a0e10',borderRadius:'1px'}})))),
+      // CMOS battery, BIOS chip, scattered SMD passives
+      this.battery('bat',1000,560,()=>this.open(this.inspBattery())),
+      this.bios('bios',940,520,()=>this.open(this.inspBIOS())),
+      ...this.smdScatter(),
+      // USB front-panel header
+      e('div',{key:'usbh',onClick:()=>this.open(this.inspUSB()),style:{position:'absolute',left:'700px',top:'656px',width:'46px',height:'22px',borderRadius:'2px',cursor:'pointer',background:'linear-gradient(180deg,#10202a,#0a141c)',border:'1px solid '+C.cyan+'33',display:'grid',gridTemplateColumns:'repeat(5,1fr)',gridTemplateRows:'1fr 1fr',gap:'2px',padding:'3px'}},
+        ...Array.from({length:10}).map((_,k)=>e('div',{key:k,style:{background:'#caa23a',opacity:.6,borderRadius:'1px',pointerEvents:'none'}}))),
+      // RGB aura underglow along the board edges
+      e('div',{key:'rgb',style:{position:'absolute',inset:'-6px',borderRadius:'20px',pointerEvents:'none',zIndex:0,
+        background:'linear-gradient(90deg,#ff4d6d,#ffb454,#54e08a,#4fd6e0,#b48cff,#ff4d6d)',backgroundSize:'200% 100%',
+        filter:'blur(16px)',opacity:.22,animation:'rgbcycle 8s linear infinite'}}),
+      // animated data pulses riding the copper traces
+      this.tracePulse('tp1','M512 354 H600',2.0,0,C.cyan),
+      this.tracePulse('tp2','M406 248 V120 H700',3.2,0.6,C.cyan),
+      this.tracePulse('tp3','M692 586 H842 V520',2.6,0.3,C.green),
+      this.tracePulse('tp4','M256 316 H300',1.6,1.0,C.amber),
+      this.tracePulse('tp5','M540 624 H300',2.8,1.4,C.violet),
+      // heat shimmer over the hot zones (CPU + VRM)
+      e('div',{key:'shCpu',style:{position:'absolute',left:(P.cpu.x-6)+'px',top:(P.cpu.y-30)+'px',width:(P.cpu.w+12)+'px',height:'36px',pointerEvents:'none',
+        background:'linear-gradient(0deg,rgba(120,200,255,.16),transparent)',filter:'blur(4px)',animation:'shimmer 2.4s ease-in-out infinite'}}),
+      e('div',{key:'shVrm',style:{position:'absolute',left:P.vrm.x+'px',top:(P.vrm.y-22)+'px',width:P.vrm.w+'px',height:'26px',pointerEvents:'none',
+        background:'linear-gradient(0deg,rgba(255,180,84,.16),transparent)',filter:'blur(4px)',animation:'shimmer 3.1s ease-in-out infinite'}}),
+      // FAN
+      this.part('fan',P.fan,{borderRadius:'50%',background:'radial-gradient(circle,#16202e,#0a121c)',border:'1px solid #243245',boxShadow:'inset 0 0 30px rgba(0,0,0,.6)'},
+        [e('div',{key:'r',style:{position:'absolute',inset:'4px',borderRadius:'50%',border:'1px solid #1a2636'}}),
+         e('div',{key:'b',style:{position:'absolute',inset:'10px',borderRadius:'50%',backgroundImage:'conic-gradient(from 0deg,rgba(120,160,200,.04) 0 26deg,rgba(120,160,200,.20) 26deg 45deg)',animation:'fan 3s linear infinite'}}),
+         e('div',{key:'h',style:{position:'absolute',left:'50%',top:'50%',width:'40px',height:'40px',transform:'translate(-50%,-50%)',borderRadius:'50%',background:'radial-gradient(circle,#1f2b3e,#0c141e)',border:'1px solid #2a3a50',boxShadow:'inset 0 1px 2px rgba(255,255,255,.08)'}},
+           e('div',{style:{position:'absolute',inset:'34%',borderRadius:'50%',border:'1px solid #34465c'}})),
+         e('div',{key:'l',style:{position:'absolute',left:0,right:0,bottom:'-18px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.2em',color:'#5a6c8a'}},'COOLING')]
+        ,()=>this.open(this.inspFan())),
+      // VRM — MOSFETs + chokes + solid caps
+      this.part('vrm',P.vrm,{display:'flex',gap:'7px',alignItems:'center',padding:'0 8px'},
+        [...[0,1,2,3,4].map(k=>e('div',{key:'ck'+k,style:{width:'30px',height:'30px',borderRadius:'4px',background:'linear-gradient(145deg,#241a0c,#120c05)',border:'1px solid '+C.amber+'44',boxShadow:'0 0 10px '+C.amber+'22,inset 0 1px 2px rgba(255,210,120,.12)'}},
+            e('div',{style:{position:'absolute',inset:'7px',borderRadius:'50%',border:'1px solid '+C.amber+'33'}}))),
+         ...[0,1,2,3].map(k=>this.mosfet('mf'+k,176+k*22,18)),
+         e('div',{key:'l',style:{position:'absolute',right:'8px',top:'-15px',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.2em',color:C.amber+'aa'}},'VRM')]
+        ,()=>this.open(this.inspVRM())),
+      // CPU — LGA socket frame + engraved heat spreader
+      this.part('cpu',P.cpu,{background:'linear-gradient(145deg,#11202d,#070c14)',borderRadius:'8px',border:'1px solid '+(on('cpu')?C.cyan:'#2c4a66'),
+        boxShadow:on('cpu')?'0 0 55px '+C.cyan+'55,inset 0 0 44px '+C.cyan+'22':'0 8px 22px rgba(0,0,0,.55),inset 0 0 30px rgba(0,0,0,.45)',padding:'10px'},
+        [e('div',{key:'socket',style:{position:'absolute',inset:'8px',borderRadius:'6px',background:'linear-gradient(145deg,#0a1119,#05090f)',border:'1px solid #243a52',boxShadow:'inset 0 0 18px rgba(0,0,0,.7)'}}),
+         e('div',{key:'ihs',style:{position:'absolute',inset:'20px',borderRadius:'5px',backgroundImage:'linear-gradient(135deg,#37485c 0%,#1d2a3a 45%,#101926 100%)',border:'1px solid #44586f',boxShadow:'inset 0 1px 0 rgba(255,255,255,.10),inset 0 -8px 18px rgba(0,0,0,.45)'}},
+           e('div',{style:{position:'absolute',inset:0,borderRadius:'5px',background:'linear-gradient(115deg,transparent 40%,rgba(255,255,255,.07) 50%,transparent 60%)'}})),
+         e('div',{key:'cores',style:{position:'absolute',inset:'34px',display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gridTemplateRows:'1fr 1fr',gap:'5px',opacity:on('cpu')?1:.22,transition:'opacity .3s'}},
+           ...Array.from({length:8}).map((_,k)=>{const a=on('cpu')&&k===0;return e('div',{key:k,style:{borderRadius:'3px',background:a?C.cyan+'33':'#0e1a28',border:'1px solid '+(a?C.cyan:'#22384e'),boxShadow:a?'inset 0 0 14px '+C.cyan+'66':'inset 0 0 6px rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'7px',color:a?C.cyan:'#3a4a5f'}},'C'+k);})),
+         on('cpu')?null:e('div',{key:'eng',style:{position:'absolute',left:0,right:0,top:'50%',transform:'translateY(-50%)',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.26em',color:'rgba(180,205,230,.5)',textShadow:'0 1px 0 rgba(0,0,0,.6)',pointerEvents:'none'}},'x86-64'),
+         e('div',{key:'l',style:{position:'absolute',left:0,right:0,top:'-16px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',letterSpacing:'.3em',color:on('cpu')?C.cyan:'#5a6c8a'}},'CPU')]
+        , ()=>this.open(this.inspCPU())),
+      // RAM sticks — notch, latches, label
+      ...[0,1,2,3].map(k=>{const rx=P.ramZone.x+k*56;const a=on('ram');return this.part('ram'+k,{x:rx,y:P.ramZone.y,w:42,h:P.ramZone.h},
+        {background:'linear-gradient(180deg,#0e2018,#08150f)',borderRadius:'4px',border:'1px solid '+(a?C.green:'#214a39'),boxShadow:a?'0 0 26px '+C.green+'44':'inset 0 0 10px rgba(0,0,0,.4)'},
+        [e('div',{key:'lat',style:{position:'absolute',left:'-3px',right:'-3px',top:'-6px',height:'6px',display:'flex',justifyContent:'space-between'}},
+            e('div',{style:{width:'7px',height:'6px',background:'#1d4233',borderRadius:'2px 2px 0 0'}}),e('div',{style:{width:'7px',height:'6px',background:'#1d4233',borderRadius:'2px 2px 0 0'}})),
+         e('div',{key:'lbl',style:{position:'absolute',left:'4px',right:'4px',top:'6px',height:'10px',borderRadius:'1px',background:'linear-gradient(90deg,#cfd8e2,#9aa6b4)',opacity:.85}}),
+         e('div',{key:'c',style:{position:'absolute',left:'5px',right:'5px',top:'20px',bottom:'34px',display:'flex',flexDirection:'column',gap:'5px'}},
+            ...Array.from({length:5}).map((_,j)=>e('div',{key:j,style:{flex:1,borderRadius:'2px',background:a&&k===0&&j===1?C.cyan+'55':'#0c241a',border:'1px solid #14352620',boxShadow:a&&k===0&&j===1?'0 0 10px '+C.cyan:'none'}}))),
+         e('div',{key:'p',style:{position:'absolute',left:'4px',right:'4px',bottom:'6px',height:'18px',background:'repeating-linear-gradient(90deg,#d8af3e 0 3px,#3a2e12 3px 5px)',borderRadius:'1px',boxShadow:'inset 0 2px 3px rgba(255,225,150,.25)'}}),
+         e('div',{key:'notch',style:{position:'absolute',left:'58%',bottom:'4px',width:'4px',height:'20px',background:'#08150f',transform:'translateX(-50%)'}}),
+         k===0?e('div',{key:'l',style:{position:'absolute',left:0,right:0,top:'-18px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.2em',color:a?C.green:'#5a6c8a',whiteSpace:'nowrap'}},'DDR5 RAM'):null],
+        ()=>this.open(this.inspRAM()));}),
+      // Chipset — finned heatsink + logo
+      this.part('chipset',P.chipset,{background:'linear-gradient(145deg,#13202e,#0a121c)',borderRadius:'7px',border:'1px solid '+(on('chipset')?C.amber:'#2c4a66'),
+        boxShadow:on('chipset')?'0 0 42px '+C.amber+'44':'0 6px 18px rgba(0,0,0,.55)'},
+        [e('div',{key:'hs',style:{position:'absolute',inset:'10px',borderRadius:'5px',backgroundImage:'repeating-linear-gradient(90deg,#26384b 0 4px,#0e1722 4px 9px)',backgroundColor:'#16202e',boxShadow:'inset 0 1px 0 rgba(255,255,255,.06),inset 0 -6px 14px rgba(0,0,0,.5)'}}),
+         e('div',{key:'lg',style:{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:'34px',height:'34px',borderRadius:'50%',background:'radial-gradient(circle,'+(on('chipset')?C.amber+'33':'#1a2738')+',transparent 70%)',border:'1px solid '+(on('chipset')?C.amber+'88':'#2c4a66'),display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'8px',color:on('chipset')?C.amber:'#46607a'}},'PCH'),
+         e('div',{key:'l',style:{position:'absolute',left:0,right:0,top:'-16px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.2em',color:on('chipset')?C.amber:'#5a6c8a'}},'CHIPSET')]
+        ,()=>this.open(this.inspChipset())),
+      // PCIe slot + GPU card
+      this.part('pcie',P.pcie,{background:'linear-gradient(180deg,#0c121d,#070b13)',borderRadius:'3px',border:'1px solid #243648',boxShadow:'inset 0 0 8px rgba(0,0,0,.6)'},
+        [e('div',{key:'pins',style:{position:'absolute',left:'6px',right:'80px',top:'4px',bottom:'4px',background:'repeating-linear-gradient(90deg,#caa23a 0 1.5px,transparent 1.5px 4px)',opacity:.4}}),
+         e('div',{key:'n',style:{position:'absolute',left:'40px',top:0,bottom:0,width:'2px',background:'#04060c'}}),
+         e('div',{key:'lock',style:{position:'absolute',right:'2px',top:'2px',bottom:'2px',width:'14px',background:'#16202e',borderRadius:'2px',border:'1px solid #243648'}}),
+         e('div',{key:'l',style:{position:'absolute',left:'70px',top:'6px',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.2em',color:'#5a708a'}},'PCIe ×16 · GPU')]
+        ,()=>this.open(this.inspPCIe())),
+      // SSD (M.2)
+      this.part('ssd',P.ssd,{background:'linear-gradient(180deg,#10182a,#0a111b)',borderRadius:'4px',border:'1px solid #2a3a50',display:'flex',alignItems:'center',paddingLeft:'12px',boxShadow:'inset 0 1px 0 rgba(255,255,255,.05)'},
+        [e('div',{key:'chip',style:{position:'absolute',right:'40px',top:'8px',bottom:'8px',width:'70px',borderRadius:'2px',background:'linear-gradient(145deg,#1a2334,#0d1320)',border:'1px solid #2c3c52'}}),
+         e('div',{key:'scr',style:{position:'absolute',right:'10px',top:'50%',width:'10px',height:'10px',marginTop:'-5px',borderRadius:'50%',background:'radial-gradient(circle at 40% 35%,#aab4c2,#5c6675)'}}),
+         e('div',{key:'l',style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',letterSpacing:'.2em',color:'#6a82a0'}},'M.2 NVMe SSD')]
+        ,()=>this.open(this.inspSSD())),
+      // NIC controller + magnetics + ethernet port with link LEDs
+      this.part('nic',P.nic,{background:'linear-gradient(145deg,#1a1230,#0c0a18)',borderRadius:'7px',border:'1px solid '+(on('nic')?C.violet:'#332a4d'),
+        boxShadow:on('nic')?'0 0 48px '+C.violet+'55,inset 0 0 30px '+C.violet+'22':'0 6px 18px rgba(0,0,0,.55)'},
+        [e('div',{key:'d',style:{position:'absolute',inset:'12px',borderRadius:'4px',background:'linear-gradient(135deg,#251c3c,#150f28)',border:'1px solid '+C.violet+'33',boxShadow:'inset 0 -6px 14px rgba(0,0,0,.4)'}}),
+         e('div',{key:'core',style:{position:'absolute',left:'42%',top:'46%',transform:'translate(-50%,-50%)',width:'40px',height:'40px',borderRadius:'4px',background:on('nic')?C.violet+'44':'#1c1636',border:'1px solid '+C.violet+'66',boxShadow:on('nic')?'0 0 20px '+C.violet:'inset 0 0 8px rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'7px',color:on('nic')?'#e6d6ff':'#6a5a8e'}},'GbE'),
+         e('div',{key:'mag',style:{position:'absolute',right:'14px',top:'18px',bottom:'18px',width:'18px',borderRadius:'2px',background:'linear-gradient(180deg,#2a2040,#16102a)',border:'1px solid '+C.violet+'33'}}),
+         e('div',{key:'l',style:{position:'absolute',left:0,right:0,top:'-16px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.2em',color:on('nic')?C.violet:'#5a6c8a'}},'NIC · PHY')]
+        ,()=>this.open(this.inspNIC())),
+      this.part('eth',P.ethport,{background:'linear-gradient(180deg,#424a5a,#1e242d)',borderRadius:'4px',border:'1px solid #525e72',boxShadow:'inset 0 0 14px rgba(0,0,0,.6),0 2px 5px rgba(0,0,0,.5)'},
+        [e('div',{key:'i',style:{position:'absolute',left:'8px',right:'8px',top:'16px',bottom:'8px',background:'#080c12',borderRadius:'2px',border:'1px solid #2a333f',boxShadow:'inset 0 4px 8px rgba(0,0,0,.7)'}},
+            e('div',{style:{position:'absolute',left:'50%',top:'-3px',width:'12px',height:'8px',marginLeft:'-6px',background:'#080c12',border:'1px solid #2a333f',borderTop:'none',borderRadius:'0 0 2px 2px'}})),
+         e('div',{key:'led1',style:{position:'absolute',left:'10px',top:'6px',width:'6px',height:'4px',borderRadius:'1px',background:C.green,boxShadow:'0 0 6px '+C.green,animation:'flick 1.3s infinite'}}),
+         e('div',{key:'led2',style:{position:'absolute',right:'10px',top:'6px',width:'6px',height:'4px',borderRadius:'1px',background:C.amber,boxShadow:'0 0 6px '+C.amber,animation:'flick 0.7s infinite'}}),
+         e('div',{key:'l',style:{position:'absolute',left:0,right:0,bottom:'-16px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',letterSpacing:'.15em',color:on('eth')?C.cyan:'#5a6c8a'}},'RJ45')]
+        ,()=>this.open(this.inspEth()))
+    );}
+
+  // cinematic floating dust motes (screen-space depth) — built once, memoized
+  dust(){const e=React.createElement;if(this._dust)return this._dust;
+    const motes=Array.from({length:34}).map((_,k)=>{const sz=(k%4===0?2.6:1.4)+Math.random();const x=Math.random()*100,y=Math.random()*100;const dur=(8+Math.random()*10).toFixed(1);
+      return e('div',{key:k,style:{position:'absolute',left:x+'%',top:y+'%',width:sz+'px',height:sz+'px',borderRadius:'50%',
+        background:'rgba(180,220,255,'+(0.10+Math.random()*0.25).toFixed(2)+')',boxShadow:'0 0 4px rgba(150,210,255,.4)',
+        animation:(k%2?'dustA ':'dustB ')+dur+'s ease-in-out infinite alternate',animationDelay:(-Math.random()*8).toFixed(1)+'s'}});});
+    this._dust=e('div',{key:'dust',style:{position:'absolute',inset:0,zIndex:42,pointerEvents:'none',overflow:'hidden'}},motes);return this._dust;}
+
+  // ---------- per-scene overlays ----------
+  beamsSvg(beams){const e=React.createElement;if(!beams||!beams.length)return null;
+    return e('svg',{style:{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:25,overflow:'visible'}},
+      beams.map((b,k)=>e('line',{key:k,x1:b.x1,y1:b.y1,x2:b.x2,y2:b.y2,stroke:b.c,strokeWidth:b.w||2,strokeDasharray:'6 8',
+        style:{animation:'dash 1s linear infinite',filter:'drop-shadow(0 0 5px '+b.c+')'},opacity:b.o!=null?b.o:.85})));}
+
+  scene(i,p,proj,cam){const C=this.C,e=React.createElement,P=this.P;
+    const c=k=>{const o=this.cen(this.P[k]);return proj(o.x,o.y);};
+    const A=(o)=>proj(o.x,o.y);
+    const board=[],panels=[],beams=[];
+    if(i===2){const r=proj(P.ramZone.x+P.ramZone.w/2,P.ramZone.y);const r2=proj(P.ramZone.x,P.ramZone.y+120);
+      panels.push(this.holo(r,{key:'p1',title:'CHROME PROCESS',color:C.cyan,w:215,rows:[{l:'PID',r:'4821'},{l:'Memory',r:'512 MB'},{l:'Threads',r:'38'},{l:'Status',r:'Running',on:true}]}));
+      panels.push(this.holo({x:r2.x-150,y:r2.y+40},{key:'p2',title:'APPLICATION LAYER',color:C.cyan,w:225,rows:[{l:'Navigate( )',on:this.ss(.2,.4,p)>.5},{l:'HTTP Request Builder',on:this.ss(.4,.6,p)>.5},{l:'Request object created',on:p>.66,r:'480 B'}]}));}
+    if(i===3){const cp=c('cpu');
+      panels.push(this.holo({x:cp.x-170,y:cp.y-20},{key:'p1',title:'EXECUTING · CORE 0',color:C.cyan,w:240,rows:[{l:'thread',r:'chrome (main)',on:true},{l:'RIP',r:'0x8174a2'},{l:'instr',r:this.asm(p)}]}));
+      const regs=this.regs(p);
+      panels.push(this.holo({x:cp.x+130,y:cp.y+44},{key:'p2',title:'REGISTERS',color:C.green,w:195,rows:regs}));
+      beams.push({x1:A(this.cen(P.ramZone)).x,y1:A(this.cen(P.ramZone)).y,x2:cp.x,y2:cp.y,c:C.green,o:.6});}
+    if(i===4){const cp=c('cpu');
+      panels.push(this.holo({x:cp.x,y:cp.y-20},{key:'p',title:'SYSTEM CALL',color:C.amber,w:215,rows:[{l:'send( )',on:true},{l:'Ring 3 → Ring 0',r:'switch',on:p>.5},{l:'privilege',r:'KERNEL'}]}));
+      const cc=c('cpu');board.push(e('div',{key:'portal',style:{position:'absolute',left:(P.cpu.x+P.cpu.w/2)+'px',top:(P.cpu.y+P.cpu.h/2)+'px',width:'150px',height:'150px',marginLeft:'-75px',marginTop:'-75px',borderRadius:'50%',border:'2px solid '+C.amber,boxShadow:'0 0 50px '+C.amber+'88,inset 0 0 40px '+C.amber+'44',background:'radial-gradient(circle,'+C.amber+'22,transparent 70%)',animation:'spin 4s linear infinite'}}));}
+    if(i===5){const cp=c('cpu');const ram=A(this.cen(P.ramZone));
+      const chain=['send()','sock_sendmsg()','tcp_sendmsg()','ip_queue_xmit()','dev_queue_xmit()'];const hi=Math.floor(this.ss(.15,.9,p)*chain.length);
+      panels.push(this.holo({x:cp.x-30,y:cp.y-30},{key:'p1',title:'net/ · KERNEL STACK',color:C.kernel,w:240,rows:chain.map((f,k)=>({l:f,on:k===this.cl(hi,0,4)}))}));
+      panels.push(this.holo({x:cp.x+200,y:cp.y+30},{key:'p2',title:'SOURCE',color:C.cyan,w:185,rows:[{l:'socket.c',on:hi<2},{l:'tcp_output.c',on:hi>=2&&hi<3},{l:'ip_output.c',on:hi>=3&&hi<4},{l:'core/dev.c',on:hi>=4}]}));
+      beams.push({x1:cp.x,y1:cp.y,x2:ram.x,y2:ram.y,c:C.green,w:2.5});
+      beams.push({x1:ram.x,y1:ram.y,x2:cp.x,y2:cp.y-40,c:C.kernel,w:2,o:.6});}
+    if(i===6){const objs=[['Socket',C.cyan],['SKB buffer',C.green],['TCP header',C.green],['IP header',C.amber],['Eth frame',C.violet]];
+      const n=Math.floor(this.ss(.1,.95,p)*objs.length)+1;
+      objs.slice(0,n).forEach((o,k)=>{board.push(e('div',{key:'o'+k,onClick:()=>this.open(this.inspPacket(0)),style:{position:'absolute',left:(P.ramZone.x-4)+'px',top:(P.ramZone.y+28+k*40)+'px',width:(P.ramZone.w+8)+'px',height:'32px',borderRadius:'5px',background:o[1]+'22',border:'1px solid '+o[1],boxShadow:'0 0 18px '+o[1]+'55',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px',cursor:'pointer',fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',color:o[1]}},e('span',null,o[0]),e('span',{style:{color:'#7f93b0'}},'0x'+(0x7f9e44+k*8).toString(16))));});
+      const r=proj(P.ramZone.x+P.ramZone.w,P.ramZone.y);panels.push(this.holo({x:r.x+30,y:r.y+60},{key:'p',title:'ALLOCATIONS',color:C.green,w:200,rows:[{l:'kmalloc',r:objs.length+'×'},{l:'GFP_KERNEL'},{l:'lifetime',r:'until ACK'}]}));}
+    if(i===7){const r=proj(P.ramZone.x+P.ramZone.w/2,P.ramZone.y);const fields=[['Seq','2748113900'],['Ack','0'],['Checksum','0x3b9a'],['Flags','PSH,ACK'],['Window','64240']];
+      const n=Math.floor(this.ss(.15,.95,p)*fields.length)+1;
+      panels.push(this.holo(r,{key:'p',title:'TCP HEADER',color:C.green,w:230,rows:fields.map((f,k)=>({l:f[0],r:f[1],on:k<n}))}));
+      board.push(e('div',{key:'cap',style:{position:'absolute',left:(P.ramZone.x-10)+'px',top:(P.ramZone.y+P.ramZone.h+18)+'px'}},this.capsule(this.cl(2+Math.floor(this.ss(.2,.9,p)*1),2,3),34,{onClick:()=>this.open(this.inspPacket(0))})));}
+    if(i===8){const ch=c('chipset');
+      panels.push(this.holo({x:ch.x,y:ch.y-20},{key:'p',title:'ROUTING ENGINE',color:C.amber,w:235,rows:[{l:'Dst IP',r:'142.250.72.46',on:true},{l:'Src IP',r:'192.168.1.24'},{l:'TTL',r:'64'},{l:'route',r:'default gw',on:p>.5}]}));
+      board.push(e('div',{key:'cap',style:{position:'absolute',left:(P.chipset.x-30)+'px',top:(P.chipset.y+P.chipset.h+16)+'px'}},this.capsule(4,32,{onClick:()=>this.open(this.inspPacket(0))})));}
+    if(i===9){const cp=c('cpu'),ni=c('nic');
+      panels.push(this.holo({x:ni.x,y:ni.y-30},{key:'p',title:'NIC DRIVER',color:C.violet,w:225,rows:[{l:'ndo_start_xmit( )',on:true},{l:'DMA setup',on:p>.35},{l:'descriptor ring',r:'#41',on:p>.6},{l:'TX queue',on:p>.8}]}));
+      beams.push({x1:cp.x,y1:cp.y,x2:ni.x,y2:ni.y,c:C.violet,w:2.5});
+      const px=this.lerp(P.cpu.x+P.cpu.w,P.nic.x,this.ss(.2,.9,p));
+      board.push(e('div',{key:'cap',style:{position:'absolute',left:px+'px',top:'560px',transform:'translateY(-50%)'}},this.capsule(5,26,{})));}
+    if(i===10){const ni=c('nic');
+      panels.push(this.holo({x:ni.x-40,y:ni.y-40},{key:'p1',title:'NIC FIRMWARE',color:C.violet,w:215,rows:[{l:'Boot ROM',r:'loaded'},{l:'Firmware',r:'running',on:true},{l:'Packet validation',on:p>.3},{l:'Checksum offload',on:p>.45},{l:'DMA engine',on:p>.6},{l:'TX scheduler',on:p>.75}]}));
+      // DMA path RAM -> PCIe -> NIC -> PHY -> port
+      const pts=[this.cen(P.ramZone),{x:P.pcie.x+200,y:P.pcie.y},this.cen(P.nic),{x:P.ethport.x,y:P.ethport.y+P.ethport.h/2}];
+      const seg=this.ss(.2,.95,p)*(pts.length-1);const si=this.cl(Math.floor(seg),0,pts.length-2);const f=seg-si;
+      const pa=pts[si],pb=pts[si+1];const bx=this.lerp(pa.x,pb.x,f),by=this.lerp(pa.y,pb.y,f);
+      board.push(e('div',{key:'dma',style:{position:'absolute',left:bx+'px',top:by+'px',transform:'translate(-50%,-50%)'}},this.capsule(5,24,{onClick:()=>this.open(this.inspPacket(0))})));
+      for(let s=0;s<pts.length-1;s++){const a=proj(pts[s].x,pts[s].y),b=proj(pts[s+1].x,pts[s+1].y);beams.push({x1:a.x,y1:a.y,x2:b.x,y2:b.y,c:C.violet,o:s<=si?.8:.25});}}
+    if(i===11){const cp=c('cpu'),ni=c('nic');
+      const fire=this.ss(.1,.5,p);
+      beams.push({x1:ni.x,y1:ni.y,x2:cp.x,y2:cp.y,c:C.red,w:3,o:fire});
+      panels.push(this.holo({x:cp.x,y:cp.y-30},{key:'p',title:'INTERRUPT · ISR',color:C.red,w:225,rows:[{l:'IRQ 16 raised',on:true},{l:'do_IRQ()',on:p>.4},{l:'napi_schedule()',on:p>.6},{l:'TX complete',r:'✓',on:p>.8}]}));
+      if(fire>0.2)board.push(e('div',{key:'fl',style:{position:'absolute',left:P.nic.x+'px',top:P.nic.y+'px',width:P.nic.w+'px',height:P.nic.h+'px',borderRadius:'7px',background:C.red+'55',animation:'flick .3s infinite',pointerEvents:'none'}}));}
+    return {board,panels,beams};}
+
+  asm(p){const a=['CALL 0x8174','MOV RAX,RDI','CMP RAX,0','JNE 0x81a0','PUSH RBP','POP RBP'];return a[Math.floor(p*a.length)%a.length];}
+  regs(p){const C=this.C;const hx=(n)=>'0x'+(n>>>0).toString(16).padStart(8,'0');const s=Math.floor(p*40);
+    return [['RAX',hx(0x7ffd1a2c+s*4)],['RBX',hx(0x0)],['RCX',hx(0x7f9e4410)],['RDX',hx(0x200+s)],['RSP',hx(0x7ffd1a08-s*8)],['RIP',hx(0x81740000+s*3)]].map(r=>({l:r[0],r:r[1]}));}
+
+  // ---------- DESK ----------
+  scDesk(p){const e=React.createElement,C=this.C;const url=this.state.url;const typed=Math.floor(this.ss(0.08,0.6,p)*url.length);
+    const showCaret=p<0.66,entered=p>0.72;const flash=entered?(0.5+0.5*Math.sin((p-0.72)*60)):0;const zoom=this.lerp(1,3.2,this.ss(0.82,1,p));
+    return e('div',{key:'desk',style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}},
+      e('div',{style:{transform:'translateY(14px) scale('+zoom+')'}},
+        e('div',{style:{width:'620px',background:'#0c1320',border:'1px solid rgba(120,160,210,.2)',borderRadius:'14px',padding:'12px',boxShadow:'0 40px 120px rgba(0,0,0,.6),0 0 70px rgba(79,214,224,'+(entered?0.25:0.08)+')'}},
+          e('div',{style:{background:'#070b13',borderRadius:'9px',overflow:'hidden',border:'1px solid rgba(120,160,210,.1)'}},
+            e('div',{style:{display:'flex',alignItems:'center',gap:'9px',padding:'11px 14px',borderBottom:'1px solid rgba(120,160,210,.1)'}},
+              e('div',{style:{display:'flex',gap:'6px'}},...['#ff5f57','#febc2e','#28c840'].map(c=>e('div',{key:c,style:{width:'11px',height:'11px',borderRadius:'50%',background:c}}))),
+              e('div',{style:{flex:1,display:'flex',alignItems:'center',gap:'9px',background:'#0c121d',border:'1px solid '+(showCaret?'rgba(79,214,224,.5)':'rgba(120,160,210,.15)'),borderRadius:'18px',padding:'8px 14px',margin:'0 8px'}},
+                e('span',{style:{width:'7px',height:'7px',borderRadius:'50%',border:'1.5px solid #6a7d9a'}}),
+                e('span',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'13px',color:'#dfeaf8'}},url.slice(0,typed),showCaret?e('span',{style:{display:'inline-block',width:'2px',height:'14px',background:C.cyan,marginLeft:'1px',verticalAlign:'-2px',opacity:Math.sin(p*40)>0?1:.2}}):null),
+                e('span',{style:{flex:1}}),entered?e('span',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',color:C.cyan,letterSpacing:'.1em'}},'⏎ ENTER'):null)),
+            e('div',{style:{height:'300px',background:'radial-gradient(120% 90% at 50% 30%,#0d1626,#060a12)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'18px',position:'relative'}},
+              e('div',{style:{width:'120px',height:'120px',borderRadius:'50%',border:'2px solid '+C.cyan+'44',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 50px '+C.cyan+(entered?'55':'18')}},
+                e('div',{style:{width:'66px',height:'66px',borderRadius:'50%',background:'conic-gradient('+C.cyan+','+C.green+','+C.amber+','+C.violet+','+C.cyan+')',animation:entered?'spin 1.4s linear infinite':'none',opacity:entered?1:.4}})),
+              e('div',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'12px',color:'#6a7d9a',letterSpacing:'.2em'}},entered?'RESOLVING '+this.host()+' …':'READY'),
+              entered?e('div',{style:{position:'absolute',inset:0,background:C.cyan,opacity:flash*0.12}}):null)))));}
+
+  // ---------- JOURNEY · TCP HANDSHAKE + SEGMENTED DATA (scene 12) ----------
+  stars(){const e=React.createElement;if(this._stars)return this._stars;
+    const dots=Array.from({length:90}).map((_,k)=>{const s=(k%5===0?2:1)+Math.random();return e('div',{key:k,style:{position:'absolute',left:(Math.random()*100)+'%',top:(Math.random()*100)+'%',width:s+'px',height:s+'px',borderRadius:'50%',background:'rgba(200,225,255,'+(0.18+Math.random()*0.6).toFixed(2)+')',boxShadow:'0 0 4px rgba(160,210,255,.5)',animation:'flick '+(2+Math.random()*4).toFixed(1)+'s infinite',animationDelay:(-Math.random()*4).toFixed(1)+'s'}});});
+    this._stars=e('div',{key:'stars',style:{position:'absolute',inset:0,pointerEvents:'none'}},dots);return this._stars;}
+
+  // a packet on the wire (world space): mini encapsulated capsule + label
+  jpkt(key,x,y,label,col,scale,on){const e=React.createElement,C=this.C;
+    return e('div',{key,onClick:on,style:{position:'absolute',left:x+'px',top:y+'px',transform:'translate(-50%,-50%) scale('+(scale||1)+')',zIndex:6,cursor:on?'pointer':'default'}},
+      e('div',{style:{display:'flex',alignItems:'center',height:'26px',borderRadius:'13px',overflow:'hidden',border:'1px solid '+col+'aa',boxShadow:'0 0 22px '+col+'aa,inset 0 0 8px rgba(255,255,255,.15)'}},
+        e('div',{style:{width:'8px',height:'100%',background:C.violet+'cc'}}),
+        e('div',{style:{width:'8px',height:'100%',background:C.amber+'cc'}}),
+        e('div',{style:{width:'8px',height:'100%',background:C.green+'cc'}}),
+        e('div',{style:{padding:'0 11px',height:'100%',display:'flex',alignItems:'center',background:'rgba(6,12,22,.92)',fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',fontWeight:600,color:col,whiteSpace:'nowrap'}},label)),
+      e('div',{style:{position:'absolute',left:'-6px',top:'50%',width:'10px',height:'10px',marginTop:'-5px',borderRadius:'50%',background:col,boxShadow:'0 0 14px '+col,animation:'pulse 1.4s ease-out infinite'}}));}
+
+  reasmBuffer(recv,delivered,sx,sy,N){const e=React.createElement,C=this.C;
+    return e('div',{key:'reasm',style:{position:'absolute',left:(sx+46)+'px',top:(sy-96)+'px',width:'186px',background:'linear-gradient(180deg,rgba(10,18,30,.95),rgba(6,12,22,.96))',border:'1px solid '+C.white+'33',borderRadius:'10px',padding:'10px 11px',boxShadow:'0 0 30px rgba(0,0,0,.6)',zIndex:7}},
+      e('div',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',letterSpacing:'.16em',color:C.green,marginBottom:'8px'}},'REASSEMBLY BUFFER'),
+      ...Array.from({length:N}).map((_,k)=>{const got=k<recv;return e('div',{key:k,style:{display:'flex',justifyContent:'space-between',alignItems:'center',height:'18px',marginBottom:'4px',padding:'0 8px',borderRadius:'4px',background:got?C.green+'22':'rgba(255,255,255,.04)',border:'1px solid '+(got?C.green+'66':'rgba(255,255,255,.08)'),fontFamily:'IBM Plex Mono,monospace',fontSize:'9px',color:got?'#dff6e8':'#5a6c8a'}},e('span',null,'seq '+(k*1460)),e('span',null,got?'✓':'…'));}),
+      delivered?e('div',{style:{marginTop:'6px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',color:C.green}},'→ delivered to application'):null);}
+
+  handshakeLadder(phid){const e=React.createElement,C=this.C;
+    const idx={EGRESS:-1,SYN:0,SYNACK:1,ACK:2,EST:3,DATA:3,REASM:3,REPLY:3}[phid];
+    const steps=[['SYN →',C.cyan],['← SYN-ACK',C.green],['ACK →',C.cyan]];
+    return e('div',{key:'ladder',style:{position:'absolute',left:'26px',top:'132px',width:'212px',background:'rgba(6,12,22,.72)',border:'1px solid rgba(120,160,210,.2)',borderRadius:'10px',padding:'12px 14px',zIndex:9,pointerEvents:'none',backdropFilter:'blur(4px)'}},
+      e('div',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',letterSpacing:'.2em',color:'#8294af',marginBottom:'10px'}},'3-WAY HANDSHAKE'),
+      ...steps.map((s,k)=>{const done=idx>k||idx===3;const active=idx===k;return e('div',{key:k,style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px',opacity:done||active?1:.4}},
+        e('div',{style:{width:'8px',height:'8px',borderRadius:'50%',background:done||active?s[1]:'#2a3a4c',boxShadow:done||active?'0 0 8px '+s[1]:'none'}}),
+        e('div',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'12px',color:done||active?s[1]:'#5a6c8a'}},s[0]),
+        done?e('div',{style:{marginLeft:'auto',color:s[1],fontSize:'11px'}},'✓'):null);}),
+      e('div',{style:{marginTop:'4px',paddingTop:'8px',borderTop:'1px solid rgba(120,160,210,.15)',fontFamily:'IBM Plex Mono,monospace',fontSize:'11px',color:idx>=3?C.green:'#5a6c8a'}},idx>=3?'● ESTABLISHED':'○ connecting…'));}
+
+  scJourney(p){const e=React.createElement,C=this.C;
+    const vw=this._vw=window.innerWidth, vh=this._vh=window.innerHeight;
+    const tt=this.state.time, cy=vh*0.52, W=Math.max(2600,vw+1700);
+    const nodes=[
+      {x:140,    y:cy+48, l:'YOUR PC',        c:C.cyan},
+      {x:0.21*W, y:cy-36, l:'HOME ROUTER',    c:C.cyan},
+      {x:0.40*W, y:cy+60, l:'ISP CORE',       c:C.amber},
+      {x:0.60*W, y:cy-56, l:'UNDERSEA FIBER', c:C.green},
+      {x:0.80*W, y:cy+52, l:'GOOGLE EDGE',    c:C.violet},
+      {x:W-150,  y:cy-22, l:'GOOGLE SERVER',  c:C.white} ];
+    const clientX=nodes[0].x, serverX=nodes[nodes.length-1].x, serverY=nodes[nodes.length-1].y;
+    const routeY=(x)=>{for(let k=0;k<nodes.length-1;k++){const a=nodes[k],b=nodes[k+1];if(x<=b.x||k===nodes.length-2){const t=this.cl((x-a.x)/(b.x-a.x),0,1);return this.lerp(a.y,b.y,t);}}return nodes[0].y;};
+
+    const phases=[
+      {id:'EGRESS',a:0.00,b:0.07,st:'SYN_SENT',  label:'LEAVING THE NIC',         desc:'Encapsulated frames serialize onto the physical medium.'},
+      {id:'SYN',   a:0.07,b:0.23,st:'SYN_SENT',  label:'SYN  →',                  desc:'Client opens the connection — SYN, seq=0.'},
+      {id:'SYNACK',a:0.23,b:0.38,st:'SYN_RCVD',  label:'←  SYN-ACK',              desc:'Server synchronizes and acknowledges — SYN-ACK, seq=0 ack=1.'},
+      {id:'ACK',   a:0.38,b:0.49,st:'ESTABLISHED',label:'ACK  →',                 desc:'Client acknowledges — ACK, ack=1. Three-way handshake complete.'},
+      {id:'EST',   a:0.49,b:0.56,st:'ESTABLISHED',label:'CONNECTION ESTABLISHED', desc:'The TCP connection is open — now application data may flow.'},
+      {id:'DATA',  a:0.56,b:0.77,st:'ESTABLISHED',label:'SEGMENTED DATA  →',      desc:'The HTTP request is split into numbered TCP segments streaming to Google.'},
+      {id:'REASM', a:0.77,b:0.87,st:'ESTABLISHED',label:'REASSEMBLY',             desc:'Segments are reordered by sequence number, then delivered to the app.'},
+      {id:'REPLY', a:0.87,b:1.00,st:'ESTABLISHED',label:'←  200 OK',              desc:'The server responds; bytes travel home and the page paints.'} ];
+    let ph=phases[0]; for(const f of phases){if(p>=f.a)ph=f;}
+    const lt=this.cl((p-ph.a)/(ph.b-ph.a),0,1), et=this.eio(0,1,lt);
+
+    // camera follows the active packet (continuous across phase boundaries)
+    let focusX=clientX;
+    if(ph.id==='SYN')focusX=this.lerp(clientX,serverX,et);
+    else if(ph.id==='SYNACK')focusX=this.lerp(serverX,clientX,et);
+    else if(ph.id==='ACK')focusX=this.lerp(clientX,serverX,et);
+    else if(ph.id==='EST')focusX=this.lerp(serverX,clientX,et);
+    else if(ph.id==='DATA')focusX=this.lerp(clientX,serverX,et);
+    else if(ph.id==='REASM')focusX=serverX;
+    else if(ph.id==='REPLY')focusX=this.lerp(serverX,clientX,et);
+    const camX=this.cl(focusX-vw*0.5,0,Math.max(0,W-vw)), wtf='translateX('+(-camX)+'px)';
+
+    // animated EM-wave field along the route (recomputed each frame → live motion)
+    const sineP=(amp,wl,phase,step)=>{let d='';for(let x=clientX-80;x<=serverX+80;x+=step){const y=routeY(x)+amp*Math.sin((x/wl)*6.28318+phase);d+=(d?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' ';}return d;};
+    const waves=e('svg',{key:'waves',width:W,height:vh,style:{position:'absolute',left:0,top:0,pointerEvents:'none'}},
+      e('path',{d:sineP(0,1,0,48),fill:'none',stroke:'rgba(120,160,210,.16)',strokeWidth:'2'}),
+      e('path',{d:sineP(28,300,tt*2.4,16),fill:'none',stroke:C.cyan,strokeWidth:'2',opacity:.34,style:{filter:'drop-shadow(0 0 5px '+C.cyan+')'}}),
+      e('path',{d:sineP(44,440,tt*1.6+1.7,16),fill:'none',stroke:C.green,strokeWidth:'1.6',opacity:.22}),
+      e('path',{d:sineP(16,170,-tt*3.2+0.6,14),fill:'none',stroke:C.violet,strokeWidth:'1.3',opacity:.22}));
+
+    const nodeEls=nodes.map((n,k)=>{const reached=focusX>=n.x-40||ph.id==='REPLY'||ph.id==='REASM';return e('div',{key:'nd'+k,onClick:()=>this.open(this.inspNode(n.l)),style:{position:'absolute',left:n.x+'px',top:n.y+'px',transform:'translate(-50%,-50%)',textAlign:'center',cursor:'pointer'}},
+      e('div',{style:{position:'relative',width:'22px',height:'22px',borderRadius:'50%',margin:'0 auto',background:reached?n.c:'#16222f',border:'2px solid '+n.c+(reached?'':'66'),boxShadow:reached?'0 0 24px '+n.c:'none'}},
+        e('div',{style:{position:'absolute',left:'50%',top:'50%',width:'40px',height:'40px',marginLeft:'-20px',marginTop:'-20px',borderRadius:'50%',border:'1px solid '+n.c+'55',animation:'pulse 2.6s ease-out infinite',animationDelay:(k*0.3)+'s'}})),
+      e('div',{style:{marginTop:'12px',fontFamily:'IBM Plex Mono,monospace',fontSize:'11px',letterSpacing:'.14em',color:reached?n.c:'#5a6c8a',whiteSpace:'nowrap',textShadow:'0 1px 5px #000'}},n.l));});
+
+    const NSEG=6, layer=[];
+    if(ph.id==='EGRESS'){for(let k=0;k<4;k++){const fp=this.cl(et*1.7-k*0.18,0,1);if(fp<=0||fp>=1)continue;const x=this.lerp(clientX,clientX+300,fp);layer.push(this.jpkt('eg'+k,x,routeY(x),'FRAME',C.cyan,0.85,()=>this.open(this.inspJourneyPacket('FRAME',k))));}}
+    if(ph.id==='SYN'){const x=this.lerp(clientX,serverX,et);layer.push(this.jpkt('syn',x,routeY(x)+18*Math.sin(tt*6),'SYN  seq=0',C.cyan,1.05,()=>this.open(this.inspJourneyPacket('SYN'))));}
+    if(ph.id==='SYNACK'){const x=this.lerp(serverX,clientX,et);layer.push(this.jpkt('sa',x,routeY(x)+18*Math.sin(tt*6),'SYN-ACK  ack=1',C.green,1.05,()=>this.open(this.inspJourneyPacket('SYNACK'))));}
+    if(ph.id==='ACK'){const x=this.lerp(clientX,serverX,et);layer.push(this.jpkt('ack',x,routeY(x)+18*Math.sin(tt*6),'ACK  ack=1',C.cyan,1.05,()=>this.open(this.inspJourneyPacket('ACK'))));}
+    if(ph.id==='DATA'){for(let k=0;k<NSEG;k++){const sp=this.cl((et-k*0.09)/0.74,0,1);if(sp<=0||sp>=1)continue;const x=this.lerp(clientX,serverX,sp);layer.push(this.jpkt('seg'+k,x,routeY(x)+14*Math.sin(tt*5+k),'SEG '+(k+1)+'/'+NSEG+'  seq='+(k*1460),C.cyan,0.95,()=>this.open(this.inspJourneyPacket('SEG',k))));}}
+    if(ph.id==='REPLY'){for(let k=0;k<4;k++){const sp=this.cl((et-k*0.11)/0.72,0,1);if(sp<=0||sp>=1)continue;const x=this.lerp(serverX,clientX,sp);layer.push(this.jpkt('rep'+k,x,routeY(x)+14*Math.sin(tt*5+k),'200 OK  '+(k+1),C.green,0.95,()=>this.open(this.inspJourneyPacket('REPLY',k))));}}
+
+    // reassembly buffer fill state
+    let recv=0, delivered=false;
+    if(ph.id==='DATA'){recv=this.cl(Math.floor((et-0.74)/0.09)+1,0,NSEG);if(et<0.74)recv=0;}
+    if(ph.id==='REASM'){recv=this.cl(Math.floor(et*(NSEG+2)),0,NSEG);delivered=et>0.82;}
+    const showBuf=(ph.id==='DATA'&&recv>0)||ph.id==='REASM';
+
+    const world=e('div',{key:'world',style:{position:'absolute',left:0,top:0,width:W+'px',height:vh+'px',transform:wtf,willChange:'transform'}},
+      waves, ...nodeEls, ...layer,
+      (ph.id==='DATA')?e('div',{key:'srcsplit',style:{position:'absolute',left:clientX+'px',top:(routeY(clientX)-86)+'px',transform:'translate(-50%,0)',textAlign:'center',pointerEvents:'none'}},
+        e('div',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'10px',letterSpacing:'.1em',color:C.cyan,whiteSpace:'nowrap'}},'HTTP REQUEST  →  '+NSEG+' SEGMENTS')):null,
+      showBuf?this.reasmBuffer(recv,delivered,serverX,serverY,NSEG):null);
+
+    const status=e('div',{key:'status',style:{position:'absolute',left:'50%',bottom:'120px',transform:'translateX(-50%)',width:Math.min(640,vw-60)+'px',textAlign:'center',pointerEvents:'none',zIndex:9}},
+      e('div',{style:{fontFamily:'IBM Plex Mono,monospace',fontSize:'12px',letterSpacing:'.24em',color:C.cyan,marginBottom:'6px'}},'TCP STATE · '+ph.st),
+      e('div',{style:{fontSize:'27px',fontWeight:700,letterSpacing:'.02em',color:ph.id==='EST'?C.green:'#eef3ff',textShadow:'0 2px 20px '+(ph.id==='EST'?C.green:C.cyan)+'66'}},ph.label),
+      e('div',{style:{fontSize:'13px',color:'#aab8cf',marginTop:'7px',lineHeight:1.5}},ph.desc));
+
+    return e('div',{key:'journeyroot',style:{position:'absolute',inset:0,overflow:'hidden',opacity:this.ss(0,0.07,p),
+      background:'radial-gradient(120% 100% at 50% 28%,#08172b 0%,#040b18 55%,#02050c 100%)'}},
+      this.stars(), world, this.handshakeLadder(ph.id), status);}
+
+  // ---------- STAGE ----------
+  // The motherboard is a SINGLE persistent element (stable keys) so it never
+  // remounts between scenes — only the camera transform and the holographic
+  // overlays change. This is what keeps transitions smooth and flicker-free.
+  renderStage(i,p){const e=React.createElement;
+    const vw=this._vw=window.innerWidth, vh=this._vh=window.innerHeight;
+    const cam=this.cam(i,p);const tx=vw/2-cam.x*cam.s, ty=vh/2-cam.y*cam.s;
+    const proj=(bx,by)=>({x:tx+bx*cam.s,y:ty+by*cam.s});
+    const focus=({2:'ram',3:'cpu',4:'cpu',5:'cpu',6:'ram',7:'ram',8:'chipset',9:'nic',10:'nic',11:'nic',12:'eth'})[i]||null;
+    const sc=(i>=1)?this.scene(i,p,proj,cam):{board:[],panels:[],beams:[]};
+    const tf='translate('+tx+'px,'+ty+'px) scale('+cam.s+')';
+    const ent=this.ss(0,0.13,p); // fade overlays in (never the board)
+    // during the journey the camera leaves the machine — fade the board out entirely
+    const boardOut=(i===12)?(1-this.ss(0.02,0.12,p)):1;
+    const showBoard=(i>=1)&&boardOut>0.001;
+    // persistent board — stable key, opacity 1, only transform updates
+    const boardLayer=showBoard?e('div',{key:'boardlayer',style:{position:'absolute',left:0,top:0,transform:tf,transformOrigin:'0 0',zIndex:5,opacity:boardOut,willChange:'transform'}},
+      this.board(focus, this.state.time)):null;
+    // scene-specific board-space extras — share the transform, fade per scene
+    const extras=(i>=1&&i!==12)?e('div',{key:'extras',style:{position:'absolute',left:0,top:0,transform:tf,transformOrigin:'0 0',zIndex:6,opacity:ent}}, ...sc.board):null;
+    // NOTE: pointerEvents:none so this full-screen overlay does not swallow clicks meant for the board beneath it. Its children (panels/beams) are non-interactive anyway.
+    const ui=(i>=1&&i!==12)?e('div',{key:'ui',style:{position:'absolute',inset:0,zIndex:7,opacity:ent,pointerEvents:'none'}}, this.beamsSvg(sc.beams), ...sc.panels):null;
+    const desk=(i===0)?e('div',{key:'desk',style:{position:'absolute',inset:0,zIndex:8}},this.scDesk(p)):null;
+    const journey=(i===12)?e('div',{key:'jr',style:{position:'absolute',inset:0,zIndex:7}},this.scJourney(p)):null;
+    return e('div',{key:'stage',style:{position:'absolute',inset:0}}, boardLayer, extras, ui, desk, journey);}
+
+  renderVals(){const {i,p}=this.locate(this.state.time);const C=this.C,e=React.createElement,ch=this.chapters;
+    const stage=e('div',{style:{position:'absolute',inset:0}},this.renderStage(i,p), i>0?this.dust():null);
+    const ticksNode=e('div',{style:{position:'absolute',left:0,right:0,top:'7px',height:'8px',pointerEvents:'none'}},
+      ch.map((c,k)=>e('div',{key:k,style:{position:'absolute',left:(c.start/this.duration*100)+'%',top:0,width:'1.5px',height:'8px',background:c.col,opacity:k===i?1:.4,boxShadow:k===i?'0 0 8px '+c.col:'none'}})));
+    const speeds=[0.25,0.5,1,2].map(s=>({label:s+'×',bc:this.state.speed===s?C.cyan+'88':'rgba(160,190,230,.18)',fc:this.state.speed===s?'#9af0f7':'#7d8aa3',bg:this.state.speed===s?C.cyan+'18':'rgba(18,26,40,.7)',set:()=>this.setState({speed:s})}));
+    const sel=this.state.sel;
+    const inspectorBody = sel? e('div',{style:{display:'flex',flexDirection:'column',gap:'11px'}},
+      sel.sections.map((sec,k)=>e('div',{key:k,style:{border:'1px solid '+sec.color+'44',borderRadius:'10px',overflow:'hidden'}},
+        e('div',{style:{background:sec.color+'14',padding:'7px 12px',fontFamily:'IBM Plex Mono,monospace',fontSize:'11px',letterSpacing:'.16em',color:sec.color}},sec.label),
+        e('div',{style:{padding:'9px 12px',fontFamily:'IBM Plex Mono,monospace',fontSize:'11.5px',lineHeight:'1.75',color:'#cfe0f4'}},
+          sec.rows.map((r,j)=>e('div',{key:j},r)))))):null;
+    const mm=(t)=>'0:'+String(Math.floor(t)).padStart(2,'0');
+    return {stage,ticksNode,speeds,inspectorBody,
+      chapterTitle:ch[i].t,chapterLayer:ch[i].layer,chapterDesc:ch[i].d,layerColor:ch[i].col,
+      chapterNo:String(i+1).padStart(2,'0'),chapterCount:String(ch.length).padStart(2,'0'),
+      duration:this.duration,time:this.state.time,pct:(this.state.time/this.duration*100)+'%',clock:mm(this.state.time)+' / '+mm(this.duration),
+      playing:this.state.playing,playLabel:this.state.playing?'❚❚':'▶',url:this.state.url,sel,
+      onPlay:()=>{if(this.state.time>=this.duration)this.setState({time:0,playing:true});else this.setState({playing:!this.state.playing});},
+      onRestart:()=>this.setState({time:0,playing:true,sel:null}),
+      onPrev:()=>{const c=ch[i];const tgt=(this.state.time-c.start<0.4&&i>0)?ch[i-1].start:c.start;this.setState({time:tgt,sel:null});},
+      onNext:()=>{const ni=Math.min(i+1,ch.length-1);this.setState({time:ch[ni].start,sel:null});},
+      onScrub:(ev)=>this.setState({time:Number(ev.target.value),playing:false}),
+      onUrl:(ev)=>this.setState({url:ev.target.value}),onClose:()=>this.setState({sel:null})};}
+}
+</script>
+</body>
+</html>

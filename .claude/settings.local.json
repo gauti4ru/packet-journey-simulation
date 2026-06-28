@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open \"Packet Journey v2.dc.html\")",
+      "Bash(node -e ' *)",
+      "Bash(gh auth *)",
+      "Bash(git config *)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(command -v gh hub)",
+      "Bash(env)",
+      "Bash(git --version)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

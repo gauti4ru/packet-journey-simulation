@@ -1,0 +1,5 @@
+# macOS
+.DS_Store
+
+# Editor / Design Component preview artifact
+.thumbnail
